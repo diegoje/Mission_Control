@@ -18,6 +18,7 @@
 *.db-wal
 *.db-shm
 *.log
+memory/
 memory/*.log
 memory/*.json
 memory/*.md

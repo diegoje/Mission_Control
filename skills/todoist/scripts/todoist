@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Wrapper for local todoist-ts-cli
+ROOT="/data/.openclaw/workspace"
+BIN="$ROOT/skills/todoist-ts-cli/node_modules/.bin/todoist"
+
+# Map TODOIST_TOKEN -> TODOIST_API_TOKEN if needed
+if [ -z "${TODOIST_API_TOKEN:-}" ] && [ -n "${TODOIST_TOKEN:-}" ]; then
+  export TODOIST_API_TOKEN="$TODOIST_TOKEN"
+fi
+
+if [ ! -x "$BIN" ]; then
+  echo "todoist CLI not found at $BIN" >&2
+  exit 1
+fi
+
+exec "$BIN" "$@"
