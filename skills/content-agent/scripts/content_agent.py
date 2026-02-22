@@ -67,9 +67,21 @@ def find_label_id_by_name(name: str) -> str:
 
 
 def list_open_tasks(project_id: str) -> List[dict]:
-    # API v1 tasks endpoint returns open tasks by default.
+    """List open tasks in a project."""
     data = get_json("/tasks", params={"project_id": project_id})
     return data.get("results", [])
+
+
+def list_sections(project_id: str) -> List[dict]:
+    data = get_json("/sections", params={"project_id": project_id})
+    return data.get("results", [])
+
+
+def find_section_id_by_name(project_id: str, name: str) -> str:
+    for s in list_sections(project_id):
+        if s.get("name") == name:
+            return s["id"]
+    raise SystemExit(f"Section not found in project {project_id}: {name}")
 
 
 def task_has_label(task: dict, label_name: str) -> bool:
@@ -82,15 +94,27 @@ def add_comment(task_id: str, content: str) -> None:
     post_json("/comments", {"task_id": task_id, "content": content})
 
 
+def update_task(task_id: str, payload: dict) -> dict:
+    return post_json(f"/tasks/{task_id}", payload)
+
+
 def main() -> int:
     project_name = os.environ.get("CONTENT_AGENT_PROJECT_NAME", "Mission Control")
     label = os.environ.get("CONTENT_AGENT_LABEL", "agent_content")
+    exclude_label = os.environ.get("CONTENT_AGENT_EXCLUDE_LABEL", "ready_for_review")
+    review_section_name = os.environ.get("CONTENT_AGENT_REVIEW_SECTION", "Ready for Review")
+    review_label = os.environ.get("CONTENT_AGENT_REVIEW_LABEL", "ready_for_review")
     dry_run = os.environ.get("CONTENT_AGENT_DRY_RUN", "0") == "1"
     max_tasks = int(os.environ.get("CONTENT_AGENT_MAX_TASKS", "3"))
 
     project_id = find_project_id_by_name(project_name)
+    review_section_id = find_section_id_by_name(project_id, review_section_name)
 
-    tasks = [t for t in list_open_tasks(project_id) if task_has_label(t, label)]
+    tasks = [
+        t
+        for t in list_open_tasks(project_id)
+        if task_has_label(t, label) and not task_has_label(t, exclude_label)
+    ]
     tasks = tasks[:max_tasks]
 
     audit_path = "/data/.openclaw/workspace/memory/agent-todoist-audit.log"
@@ -111,12 +135,19 @@ def main() -> int:
 
         if dry_run:
             with open(audit_path, "a", encoding="utf-8") as f:
-                f.write(f"[{now_iso()}] DRY_RUN would comment on task {tid}\n")
+                f.write(f"[{now_iso()}] DRY_RUN would claim + worklog + move-to-review for task {tid}\n")
             continue
 
         add_comment(tid, claim)
         time.sleep(0.4)
         add_comment(tid, worklog)
+        time.sleep(0.4)
+
+        # Mark ready for Diego review: move to section + add review label.
+        existing = t.get("labels") or []
+        if review_label not in existing:
+            existing = list(existing) + [review_label]
+        update_task(tid, {"section_id": review_section_id, "labels": existing})
         time.sleep(0.4)
 
     return 0
