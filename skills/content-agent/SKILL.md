@@ -5,15 +5,25 @@ description: Periodic content-production agent for MedForm3D. Use when you need 
 
 # Content Agent (Todoist-driven)
 
-## Operating loop
+## Operating loop (authoritative)
 
-1) Query Todoist for open tasks with label `agent_content` (Mission Control project by default).
-2) For each task:
-   - Add a "claimed" comment (timestamp).
-   - Generate the requested deliverable(s) using GPT-5.2 for creative text.
-   - If images are requested: generate via the configured image model ("nano banana pro" if available) and save outputs under `/data/.openclaw/workspace/assets/content-agent/<task-id>/`.
-   - Post a structured worklog back to the task as one or more Todoist comments.
-   - Optionally add label `ready` when deliverable is ready for Diego review.
+1) Query Todoist for **open** tasks in project `Mission Control` with label `agent_content`.
+2) **Skip** any task that already has label `ready_for_review`.
+3) Build the **effective brief**:
+   - Base: Todoist task description.
+   - Override: latest **human** comment (any comment not starting with `Content Agent:`). Latest human comment wins.
+4) Infer intent/type and produce text-only outputs:
+   - **Ideas request ("Generate N ideas")** → produce N distinct ideas. Create **one Notion row per idea** in the `Content Creation` database with **Status = Idea** and put the idea into `Brief / Notes`.
+   - **Draft request (blog post / LinkedIn / IG / Reel / etc.)** → create **one Notion row** with **Status = In progress** and fill `Draft Text` / `Script` / `Hashtags` / `CTA` as appropriate.
+   - **Image-based IG request** → if the Todoist task/comment has an attachment URL, add it to the Notion row `Assets` as an external file link; tailor the caption to that image.
+5) Post a "Content Agent Worklog" comment back to the Todoist task including:
+   - what you created
+   - Notion page URLs
+   - assumptions + questions
+6) Mark for review:
+   - Move the Todoist task to section **Ready for Review**
+   - Add label `ready_for_review`
+   - **Do NOT remove** `agent_content` (Diego uses removing `ready_for_review` to request iteration).
 
 ## Guardrails (non-negotiable)
 - Draft-only: never publish/post anywhere automatically.
