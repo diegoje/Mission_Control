@@ -96,6 +96,33 @@ def add_comment(task_id: str, content: str) -> None:
     post_json("/comments", {"task_id": task_id, "content": content})
 
 
+def get_comments(task_id: str) -> List[dict]:
+    data = get_json("/comments", params={"task_id": task_id})
+    return data.get("results", [])
+
+
+def latest_human_instructions(task: dict) -> str:
+    """Build the effective brief.
+
+    Rule: latest human comments override the description. We treat any comment not
+    authored by the Content Agent (prefix 'Content Agent:') as human input.
+    """
+    desc = (task.get("description") or "").strip()
+    comments = get_comments(task["id"])
+    human = [c.get("content", "") for c in comments if not (c.get("content", "").startswith("Content Agent:"))]
+    human = [h.strip() for h in human if h and h.strip()]
+
+    if not human:
+        return desc
+
+    # Use the latest human message as the primary override, while keeping the
+    # original description as context.
+    latest = human[-1]
+    if desc:
+        return f"Base brief (task description):\n{desc}\n\nLatest instruction (comment):\n{latest}"
+    return latest
+
+
 def update_task(task_id: str, payload: dict) -> dict:
     return post_json(f"/tasks/{task_id}", payload)
 
@@ -147,6 +174,8 @@ def main() -> int:
     for t in tasks:
         tid = t["id"]
         title = t.get("content", "")
+        effective_brief = latest_human_instructions(t)
+
         with open(audit_path, "a", encoding="utf-8") as f:
             f.write(f"[{now_iso()}] picked task {tid} :: {title}\n")
 
@@ -155,6 +184,8 @@ def main() -> int:
             "Content Agent Worklog (placeholder)\n"
             f"- Task: {title}\n"
             f"- Started: {now_iso()}\n\n"
+            "Effective brief used (description + latest human comment override):\n"
+            f"{effective_brief}\n\n"
             "Next: creative generation step must be executed by OpenClaw runtime (GPT-5.2 / image model).\n"
         )
 
