@@ -1,0 +1,126 @@
+#!/usr/bin/env python3
+"""Todoist-driven content agent.
+
+Scope:
+- Pull open tasks with label agent_content from a target project
+- Post comments for claiming + a placeholder worklog
+
+NOTE: This is the deterministic I/O skeleton. The creative generation step is intentionally
+left as a callable hook so it can be implemented using OpenClaw's agent runtime (GPT-5.2)
+without embedding secrets or provider SDKs here.
+"""
+
+import os
+import sys
+import json
+import time
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional
+
+import requests
+
+API = "https://api.todoist.com/api/v1"
+
+
+def now_iso() -> str:
+    return datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
+
+
+def auth_headers() -> Dict[str, str]:
+    tok = os.environ.get("TODOIST_API_TOKEN")
+    if not tok:
+        raise SystemExit("TODOIST_API_TOKEN is not set")
+    return {"Authorization": f"Bearer {tok}"}
+
+
+def get_json(path: str, params: Optional[dict] = None) -> dict:
+    r = requests.get(f"{API}{path}", headers=auth_headers(), params=params, timeout=30)
+    r.raise_for_status()
+    return r.json()
+
+
+def post_json(path: str, payload: dict) -> dict:
+    r = requests.post(
+        f"{API}{path}",
+        headers={**auth_headers(), "Content-Type": "application/json"},
+        data=json.dumps(payload),
+        timeout=30,
+    )
+    r.raise_for_status()
+    return r.json()
+
+
+def find_project_id_by_name(name: str) -> str:
+    data = get_json("/projects")
+    for p in data.get("results", []):
+        if p.get("name") == name:
+            return p["id"]
+    raise SystemExit(f"Project not found: {name}")
+
+
+def find_label_id_by_name(name: str) -> str:
+    data = get_json("/labels")
+    for l in data.get("results", []):
+        if l.get("name") == name:
+            return str(l["id"])
+    raise SystemExit(f"Label not found: {name}")
+
+
+def list_open_tasks(project_id: str) -> List[dict]:
+    # API v1 tasks endpoint returns open tasks by default.
+    data = get_json("/tasks", params={"project_id": project_id})
+    return data.get("results", [])
+
+
+def task_has_label(task: dict, label_name: str) -> bool:
+    # v1 returns labels as list of label names (strings)
+    labels = task.get("labels") or []
+    return label_name in labels
+
+
+def add_comment(task_id: str, content: str) -> None:
+    post_json("/comments", {"task_id": task_id, "content": content})
+
+
+def main() -> int:
+    project_name = os.environ.get("CONTENT_AGENT_PROJECT_NAME", "Mission Control")
+    label = os.environ.get("CONTENT_AGENT_LABEL", "agent_content")
+    dry_run = os.environ.get("CONTENT_AGENT_DRY_RUN", "0") == "1"
+    max_tasks = int(os.environ.get("CONTENT_AGENT_MAX_TASKS", "3"))
+
+    project_id = find_project_id_by_name(project_name)
+
+    tasks = [t for t in list_open_tasks(project_id) if task_has_label(t, label)]
+    tasks = tasks[:max_tasks]
+
+    audit_path = "/data/.openclaw/workspace/memory/agent-todoist-audit.log"
+
+    for t in tasks:
+        tid = t["id"]
+        title = t.get("content", "")
+        with open(audit_path, "a", encoding="utf-8") as f:
+            f.write(f"[{now_iso()}] picked task {tid} :: {title}\n")
+
+        claim = f"Content Agent: claimed at {now_iso()}. I will generate deliverables and post a worklog here."
+        worklog = (
+            "Content Agent Worklog (placeholder)\n"
+            f"- Task: {title}\n"
+            f"- Started: {now_iso()}\n\n"
+            "Next: creative generation step must be executed by OpenClaw runtime (GPT-5.2 / image model).\n"
+        )
+
+        if dry_run:
+            with open(audit_path, "a", encoding="utf-8") as f:
+                f.write(f"[{now_iso()}] DRY_RUN would comment on task {tid}\n")
+            continue
+
+        add_comment(tid, claim)
+        time.sleep(0.4)
+        add_comment(tid, worklog)
+        time.sleep(0.4)
+
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
