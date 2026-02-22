@@ -69,9 +69,19 @@ def find_label_id_by_name(name: str) -> str:
 
 
 def list_open_tasks(project_id: str) -> List[dict]:
-    """List open tasks in a project."""
-    data = get_json("/tasks", params={"project_id": project_id})
-    return data.get("results", [])
+    """List open tasks in a project (handles cursor pagination)."""
+    out: List[dict] = []
+    cursor = None
+    while True:
+        params = {"project_id": project_id}
+        if cursor:
+            params["cursor"] = cursor
+        data = get_json("/tasks", params=params)
+        out.extend(data.get("results", []))
+        cursor = data.get("next_cursor")
+        if not cursor:
+            break
+    return out
 
 
 def list_sections(project_id: str) -> List[dict]:
