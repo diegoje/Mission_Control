@@ -19,7 +19,9 @@ from typing import Any, Dict, List, Optional
 
 import requests
 
-API = "https://api.todoist.com/api/v1"
+TODOIST_API = "https://api.todoist.com/api/v1"
+NOTION_API = "https://api.notion.com/v1"
+NOTION_VERSION = "2022-06-28"
 
 
 def now_iso() -> str:
@@ -34,14 +36,14 @@ def auth_headers() -> Dict[str, str]:
 
 
 def get_json(path: str, params: Optional[dict] = None) -> dict:
-    r = requests.get(f"{API}{path}", headers=auth_headers(), params=params, timeout=30)
+    r = requests.get(f"{TODOIST_API}{path}", headers=auth_headers(), params=params, timeout=30)
     r.raise_for_status()
     return r.json()
 
 
 def post_json(path: str, payload: dict) -> dict:
     r = requests.post(
-        f"{API}{path}",
+        f"{TODOIST_API}{path}",
         headers={**auth_headers(), "Content-Type": "application/json"},
         data=json.dumps(payload),
         timeout=30,
@@ -98,12 +100,35 @@ def update_task(task_id: str, payload: dict) -> dict:
     return post_json(f"/tasks/{task_id}", payload)
 
 
+def notion_headers() -> Dict[str, str]:
+    tok = os.environ.get("NOTION_TOKEN")
+    if not tok:
+        raise SystemExit("NOTION_TOKEN is not set")
+    return {
+        "Authorization": f"Bearer {tok}",
+        "Notion-Version": NOTION_VERSION,
+        "Content-Type": "application/json",
+    }
+
+
+def notion_create_page(database_id: str, props: dict) -> dict:
+    r = requests.post(
+        f"{NOTION_API}/pages",
+        headers=notion_headers(),
+        data=json.dumps({"parent": {"database_id": database_id}, "properties": props}),
+        timeout=30,
+    )
+    r.raise_for_status()
+    return r.json()
+
+
 def main() -> int:
     project_name = os.environ.get("CONTENT_AGENT_PROJECT_NAME", "Mission Control")
     label = os.environ.get("CONTENT_AGENT_LABEL", "agent_content")
     exclude_label = os.environ.get("CONTENT_AGENT_EXCLUDE_LABEL", "ready_for_review")
     review_section_name = os.environ.get("CONTENT_AGENT_REVIEW_SECTION", "Ready for Review")
     review_label = os.environ.get("CONTENT_AGENT_REVIEW_LABEL", "ready_for_review")
+    notion_db_id = os.environ.get("CONTENT_AGENT_NOTION_DB_ID", "30f5d4551f5681df854cec8394a19414")
     dry_run = os.environ.get("CONTENT_AGENT_DRY_RUN", "0") == "1"
     max_tasks = int(os.environ.get("CONTENT_AGENT_MAX_TASKS", "3"))
 
@@ -142,6 +167,22 @@ def main() -> int:
         time.sleep(0.4)
         add_comment(tid, worklog)
         time.sleep(0.4)
+
+        # Persist a record in Notion (Content Creation DB).
+        # Keep it minimal; richer fields can be filled by the creative worker.
+        todoist_url = f"https://todoist.com/app/task/{tid}"
+        try:
+            notion_create_page(
+                notion_db_id,
+                {
+                    "Name": {"title": [{"type": "text", "text": {"content": title}}]},
+                    "Status": {"select": {"name": "Ready"}},
+                    "Todoist Task ID": {"rich_text": [{"type": "text", "text": {"content": str(tid)}}]},
+                    "Todoist Task URL": {"url": todoist_url},
+                },
+            )
+        except Exception as e:
+            add_comment(tid, f"Content Agent: WARNING — failed to write Notion record: {e}")
 
         # Mark ready for Diego review: move to section + add review label.
         existing = t.get("labels") or []

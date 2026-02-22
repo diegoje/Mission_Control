@@ -33,6 +33,10 @@ description: Periodic content-production agent for MedForm3D. Use when you need 
 - `CONTENT_AGENT_LABEL` (default: agent_content)
 - `CONTENT_AGENT_DRY_RUN` (default: 0)
 - `CONTENT_AGENT_MAX_TASKS` (default: 3)
+- `CONTENT_AGENT_REVIEW_SECTION` (default: Ready for Review)
+- `CONTENT_AGENT_REVIEW_LABEL` (default: ready_for_review)
+- `CONTENT_AGENT_EXCLUDE_LABEL` (default: ready_for_review) — agent must NOT pick these up
+- `CONTENT_AGENT_NOTION_DB_ID` (default: Content Creation DB id in this workspace)
 - `IMAGE_MODEL` (default: nano-banana-pro) — used only if image generation is enabled
 
 ## Scheduling
