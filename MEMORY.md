@@ -25,17 +25,14 @@ Added: 2026-02-18
 - **90-day sprint:** Medical Director recruitment, pilot customer acquisition, LinkedIn regulatory-focused campaign
 - **Location:** https://www.notion.so/Business-Analysis-Merged-Final-3105d4551f56817280fee17a4e0a5e28
 
-## Automated Systems (Active)
-- **Daily news digest:** Cron job `morning-news` — 07:00 Europe/Berlin (global events, 3D printing, Brazil, Switzerland)
-- **Weekly business review:** Cron job `business-plan-review` — Fridays 09:00 (analyzes learnings, suggests updates, creates Todoist review task)
-
 ## Competitor Intelligence
 **Materialise (Feb 2025):** Launched PEEK CMF implants complementing titanium portfolio. 
 - *Implication:* Hydrogel differentiation more critical; CMF surgical planning (not implants) remains underserved opportunity.
 
 ## Automated Systems (Active)
-- **Daily news digest:** Cron job `morning-news` — 07:00 Europe/Berlin (global events, 3D printing, Brazil, Switzerland)
-- **Weekly business review:** Cron job `business-plan-review` — Fridays 09:00 (analyzes learnings, suggests updates, creates Todoist review task)
+- **Daily news digest:** Cron job `morning-news` — 07:00 Europe/Berlin
+- **Friday business plan review:** Heartbeat reminder — Fridays 09:00 (user replies "RUN" to execute)
+- **Sunday accounting reminder:** Heartbeat reminder — Sundays 10:00 (user replies "process receipts")
 
 ## Receipt Processing Skill (NEW)
 **Trigger phrases:** "process receipts", "process all receipts", or direct image upload
