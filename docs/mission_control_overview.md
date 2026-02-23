@@ -20,6 +20,11 @@
 - On request: create/update Notion pages for Projects, Contacts, Ideas
 - On request: create Todoist tasks and reminders
 
+## Agent topology (current)
+- **Single assistant agent (“Fred”)** behind the Telegram bot.
+- We use **manual modes** in-chat (e.g. “content mode”, “ops mode”) instead of separate agents/bots.
+- When needed, we manually start a clean context via **/new** (or explicitly naming a new thread) and can manually switch models per task.
+
 ## Audit
 - System actions are logged to `memory/agent-audit.log` and `memory/agent-todoist-audit.log` (local only; not committed)
 

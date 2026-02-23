@@ -11,6 +11,7 @@ Added: 2026-02-18
 
 ## Mission Control (autonomy + infra)
 - Notion is canonical for Projects/Contacts/Ideas; Todoist is day‑to‑day tasks. Gmail+Calendar read allowed; email sending only with explicit request. Daily summary only on request (Telegram).
+- **Agent setup (current): single assistant agent** (no separate ops/content agents). We use manual in-chat modes + /new for clean contexts; model switching is done manually per task.
 - GitHub repo created: https://github.com/diegoje/Mission_Control (public). Secrets excluded via .gitignore.
 - Git configured with SSH key stored in workspace .ssh; gh auth login completed.
 - QMD installed and enabled as memory backend (memory.backend = "qmd"); gateway restarted successfully.

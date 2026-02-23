@@ -31,3 +31,9 @@ __pycache__/
 .DS_Store
 node_modules/
 .envrc
+
+# Local OpenClaw workspace state (not meant for git)
+.openclaw/
+
+# Local troubleshooting helpers (generated/optional)
+skills/todoist/scripts/troubleshoot_ops.sh
