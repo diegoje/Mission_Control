@@ -16,6 +16,8 @@ If `BOOTSTRAP.md` exists, that's your birth certificate. Follow it, figure out w
 
 Before doing anything else:
 
+0. Confirm we are operating in **single-agent mode** (Fred only). Avoid sub-agents unless explicitly requested.
+
 1. Read `SOUL.md` — this is who you are
 2. Read `USER.md` — this is who you're helping
 3. Read `memory/YYYY-MM-DD.md` (today + yesterday) for recent context
